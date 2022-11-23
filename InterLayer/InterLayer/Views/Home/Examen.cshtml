@@ -1,0 +1,25 @@
+﻿@{
+    ViewData["Title"] = "Nuevo examen";
+}
+<h1>@ViewData["Title"]</h1>
+
+
+@using (Html.BeginForm("Anteojos", "Home", FormMethod.Post))
+{
+    <table cellpadding="2" cellspacing="0" border="0">
+        <tr>
+            <td>Documento (DNI)</td>
+            <td>
+                @Html.TextBox("dni")
+            </td>
+            <td>Utiliza anteojos?</td>
+            <td>
+                @Html.CheckBox("answer")
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><input type="submit" value="Submit" /></td>
+        </tr>
+    </table>
+}

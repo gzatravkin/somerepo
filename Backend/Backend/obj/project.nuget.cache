@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "dgSpecHash": "nUf5YiJ7mU8KnTuvEQc68CbvPB6HPZLhSTDLiywJF+k64KiaPDgmsSHOe8XKGNKfUupodfjFuPy9QkZvMstZ0A==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Grigoriy\\source\\repos\\TPTecnicasAvanzadas\\Backend\\Backend\\Backend.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\microsoft.csharp\\4.7.0\\microsoft.csharp.4.7.0.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\microsoft.extensions.apidescription.server\\3.0.0\\microsoft.extensions.apidescription.server.3.0.0.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\microsoft.openapi\\1.2.3\\microsoft.openapi.1.2.3.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\pipelines.sockets.unofficial\\2.2.2\\pipelines.sockets.unofficial.2.2.2.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\servicestack.common\\6.4.0\\servicestack.common.6.4.0.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\servicestack.interfaces\\6.4.0\\servicestack.interfaces.6.4.0.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\servicestack.redis\\6.4.0\\servicestack.redis.6.4.0.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\servicestack.text\\6.4.0\\servicestack.text.6.4.0.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\stackexchange.redis\\2.6.80\\stackexchange.redis.2.6.80.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\swashbuckle.aspnetcore\\6.2.3\\swashbuckle.aspnetcore.6.2.3.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\6.2.3\\swashbuckle.aspnetcore.swagger.6.2.3.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\6.2.3\\swashbuckle.aspnetcore.swaggergen.6.2.3.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\swashbuckle.aspnetcore.swaggerui\\6.2.3\\swashbuckle.aspnetcore.swaggerui.6.2.3.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\system.diagnostics.diagnosticsource\\6.0.0\\system.diagnostics.diagnosticsource.6.0.0.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\system.io.pipelines\\5.0.1\\system.io.pipelines.5.0.1.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\system.memory\\4.5.4\\system.memory.4.5.4.nupkg.sha512",
+    "C:\\Users\\Grigoriy\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\6.0.0\\system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

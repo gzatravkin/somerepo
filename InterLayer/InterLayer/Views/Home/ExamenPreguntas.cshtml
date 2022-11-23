@@ -1,0 +1,56 @@
+﻿@{
+    ViewData["Title"] = "Por favor, responde las preguntas del examen";
+
+    List<SelectListItem> options1 = ViewBag.preguntas[0].options;
+    List<SelectListItem> options2 = ViewBag.preguntas[1].options;
+    List<SelectListItem> options3 = ViewBag.preguntas[2].options;
+    List<SelectListItem> options4 = ViewBag.preguntas[3].options;
+    List<SelectListItem> options5 = ViewBag.preguntas[4].options;
+    List<SelectListItem> options6 = ViewBag.preguntas[5].options;
+    List<SelectListItem> options7 = ViewBag.preguntas[6].options;
+    List<SelectListItem> options8 = ViewBag.preguntas[7].options; 
+    List<SelectListItem> options9 = ViewBag.preguntas[8].options;
+    List<SelectListItem> options10 = ViewBag.preguntas[9].options;
+    string passowrd = ViewBag.password;
+}
+<h1>@ViewData["Title"]</h1>
+
+
+@using (Html.BeginForm("ResponderExamen", "Home", FormMethod.Post))
+{
+<div><td>@Html.TextBox("password", passowrd, new { @readonly="readonly" })</td></div>
+<td>Pregunta 1: @ViewBag.preguntas[0].text </td>
+ @Html.DropDownList("answer1", options1, new { @class = "form-control" })
+
+    <td>Pregunta 2: @ViewBag.preguntas[1].text </td>
+@Html.DropDownList("answer2", options2, new { @class = "form-control" })
+
+    <td>Pregunta 3: @ViewBag.preguntas[2].text </td>
+@Html.DropDownList("answer3", options3, new { @class = "form-control" })
+
+
+<td>Pregunta 4: @ViewBag.preguntas[3].text </td>
+@Html.DropDownList("answer4", options4, new { @class = "form-control" })
+ 
+    <td>Pregunta 5: @ViewBag.preguntas[4].text </td>
+@Html.DropDownList("answer5", options5, new { @class = "form-control" })
+
+    <td>Pregunta 6: @ViewBag.preguntas[5].text </td>
+@Html.DropDownList("answer6", options6, new { @class = "form-control" })
+ 
+    <td>Pregunta 7: @ViewBag.preguntas[6].text </td>
+@Html.DropDownList("answer7", options7, new { @class = "form-control" })
+
+    <td>Pregunta 8: @ViewBag.preguntas[7].text </td>
+@Html.DropDownList("answer8", options8, new { @class = "form-control" })
+ 
+    <td>Pregunta 9: @ViewBag.preguntas[8].text </td>
+@Html.DropDownList("answer9", options9, new { @class = "form-control" })
+ 
+    <td>Pregunta 10: @ViewBag.preguntas[0].text </td>
+@Html.DropDownList("answer10", options10, new { @class = "form-control" })
+<tr>
+    <td></td>
+    <td><input type="submit" value="Submit" /></td>
+</tr>
+}
