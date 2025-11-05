@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(devtunnel create:*)",
+      "Bash(where devtunnel)",
+      "Bash(winget install:*)",
+      "Bash(powershell:*)",
+      "Bash(copy:*)",
+      "Bash(del \"components\\Game_fixed.tsx\")",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(.run-game.bat)",
+      "Bash(run-game.bat)",
+      "Bash(claude --version)",
+      "Bash(where claude)",
+      "Bash(npm install:*)",
+      "Bash(del \"C:\\Users\\user\\.local\\bin\\claude.exe\")",
+      "Bash(npm config:*)",
+      "Bash(\"C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd\" --version)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
+    ],
+    "deny": []
+  }
+}

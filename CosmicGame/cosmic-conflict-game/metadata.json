@@ -1,0 +1,5 @@
+{
+  "name": "Cosmic Conflict",
+  "description": "An agar.io-style space combat game where you evolve your ship by destroying others. Navigate the cosmos, outmaneuver larger foes, and dominate the arena. Your ship follows the mouse, and you click to shoot.",
+  "requestFramePermissions": []
+}
