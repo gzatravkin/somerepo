@@ -1,0 +1,204 @@
+import React, { useEffect, useRef, useState } from 'react';
+
+interface MobileControlsProps {
+  onJoystickMove: (angle: number | null, distance: number) => void;
+  onShoot: () => void;
+  onShield: () => void;
+  shieldEnergy: number;
+  maxShieldEnergy: number;
+}
+
+const MobileControls: React.FC<MobileControlsProps> = ({
+  onJoystickMove,
+  onShoot,
+  onShield,
+  shieldEnergy,
+  maxShieldEnergy,
+}) => {
+  const [joystickActive, setJoystickActive] = useState(false);
+  const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
+  const joystickBaseRef = useRef<HTMLDivElement>(null);
+  const joystickTouchId = useRef<number | null>(null);
+  const shootTouchId = useRef<number | null>(null);
+
+  const JOYSTICK_RADIUS = 60;
+  const JOYSTICK_MAX_DISTANCE = 50;
+
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      Array.from(e.changedTouches).forEach((touch) => {
+        const target = touch.target as HTMLElement;
+
+        // Handle joystick touch
+        if (joystickBaseRef.current?.contains(target) && joystickTouchId.current === null) {
+          e.preventDefault();
+          joystickTouchId.current = touch.identifier;
+          setJoystickActive(true);
+          updateJoystickPosition(touch);
+        }
+      });
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      Array.from(e.changedTouches).forEach((touch) => {
+        // Update joystick position
+        if (touch.identifier === joystickTouchId.current) {
+          e.preventDefault();
+          updateJoystickPosition(touch);
+        }
+      });
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      Array.from(e.changedTouches).forEach((touch) => {
+        // Release joystick
+        if (touch.identifier === joystickTouchId.current) {
+          e.preventDefault();
+          joystickTouchId.current = null;
+          setJoystickActive(false);
+          setJoystickPosition({ x: 0, y: 0 });
+          onJoystickMove(null, 0);
+        }
+
+        // Release shoot button
+        if (touch.identifier === shootTouchId.current) {
+          shootTouchId.current = null;
+        }
+      });
+    };
+
+    const updateJoystickPosition = (touch: Touch) => {
+      if (!joystickBaseRef.current) return;
+
+      const rect = joystickBaseRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const dx = touch.clientX - centerX;
+      const dy = touch.clientY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+
+      const clampedDistance = Math.min(distance, JOYSTICK_MAX_DISTANCE);
+      const x = Math.cos(angle) * clampedDistance;
+      const y = Math.sin(angle) * clampedDistance;
+
+      setJoystickPosition({ x, y });
+      onJoystickMove(angle, clampedDistance / JOYSTICK_MAX_DISTANCE);
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [onJoystickMove]);
+
+  const handleShootTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (shootTouchId.current === null && e.touches.length > 0) {
+      shootTouchId.current = e.touches[0].identifier;
+    }
+  };
+
+  const handleShootTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (shootTouchId.current !== null) {
+      onShoot();
+      shootTouchId.current = null;
+    }
+  };
+
+  const handleShieldTouch = (e: React.TouchEvent) => {
+    e.preventDefault();
+    onShield();
+  };
+
+  return (
+    <div className="mobile-controls pointer-events-auto">
+      {/* Virtual Joystick */}
+      <div
+        ref={joystickBaseRef}
+        className="fixed bottom-8 left-8 z-50"
+        style={{
+          width: `${JOYSTICK_RADIUS * 2}px`,
+          height: `${JOYSTICK_RADIUS * 2}px`,
+        }}
+      >
+        {/* Joystick Base */}
+        <div
+          className="absolute inset-0 rounded-full border-4 border-white/30 bg-white/10"
+          style={{
+            backdropFilter: 'blur(10px)',
+          }}
+        />
+
+        {/* Joystick Stick */}
+        <div
+          className="absolute rounded-full bg-white/70 border-2 border-white transition-all"
+          style={{
+            width: '50px',
+            height: '50px',
+            left: `${JOYSTICK_RADIUS - 25 + joystickPosition.x}px`,
+            top: `${JOYSTICK_RADIUS - 25 + joystickPosition.y}px`,
+            backdropFilter: 'blur(5px)',
+            boxShadow: joystickActive ? '0 0 20px rgba(255, 255, 255, 0.5)' : 'none',
+          }}
+        />
+
+        {/* Joystick Label */}
+        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-white/70 text-xs font-bold whitespace-nowrap">
+          MOVE
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="fixed bottom-8 right-8 z-50 flex flex-col gap-4">
+        {/* Shoot Button */}
+        <button
+          onTouchStart={handleShootTouchStart}
+          onTouchEnd={handleShootTouchEnd}
+          className="w-20 h-20 rounded-full bg-red-600/70 border-4 border-red-400/80 active:bg-red-700 active:scale-95 transition-all flex items-center justify-center text-white font-bold text-sm shadow-lg"
+          style={{
+            backdropFilter: 'blur(10px)',
+            touchAction: 'none',
+          }}
+        >
+          <div className="flex flex-col items-center">
+            <div className="text-2xl">🔫</div>
+            <div className="text-xs">FIRE</div>
+          </div>
+        </button>
+
+        {/* Shield Button */}
+        <button
+          onTouchStart={handleShieldTouch}
+          disabled={shieldEnergy < 1}
+          className={`w-20 h-20 rounded-full border-4 active:scale-95 transition-all flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+            shieldEnergy >= 1
+              ? 'bg-blue-600/70 border-blue-400/80 active:bg-blue-700'
+              : 'bg-gray-600/50 border-gray-500/50 opacity-50'
+          }`}
+          style={{
+            backdropFilter: 'blur(10px)',
+            touchAction: 'none',
+          }}
+        >
+          <div className="flex flex-col items-center">
+            <div className="text-2xl">🛡️</div>
+            <div className="text-xs">SHIELD</div>
+            <div className="text-xs mt-1">{Math.floor(shieldEnergy)}</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default MobileControls;

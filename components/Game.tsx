@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Ship, Projectile, Vector, Star, WeaponType, Explosion, Loot, Base, AIState, AIPersonality, UpgradeType } from '../types';
 import { distance, getRandomColor, getRandomPosition } from '../utils/helpers';
+import MobileControls from './MobileControls';
 
 interface GameProps {
   onGameOver: (score: number) => void;
@@ -36,6 +37,12 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   const [maxPlayerShieldEnergy, setMaxPlayerShieldEnergy] = useState(7);
   const [timeRemaining, setTimeRemaining] = useState(WIN_TIME);
   const nebulaCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Mobile controls state
+  const [isMobile, setIsMobile] = useState(false);
+  const joystickInput = useRef<{ angle: number | null; distance: number }>({ angle: null, distance: 0 });
+  const lastShootTime = useRef<number>(0);
+  const autoShootInterval = useRef<NodeJS.Timeout | null>(null);
 
 
   const createShip = (isPlayer: boolean = false, assignedBase: Base | null = null): Ship => {
@@ -376,10 +383,66 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
     }
   }, []);
 
+  // Mobile control handlers
+  const handleJoystickMove = useCallback((angle: number | null, distance: number) => {
+    joystickInput.current = { angle, distance };
+  }, []);
+
+  const handleMobileShoot = useCallback(() => {
+    const now = Date.now();
+    if (now - lastShootTime.current > 100) { // Prevent too rapid firing
+      shoot(PLAYER_ID);
+      lastShootTime.current = now;
+    }
+  }, []);
+
+  const handleMobileShield = useCallback(() => {
+    activateShield(PLAYER_ID);
+  }, []);
+
+  // Touch event handlers for canvas (tap anywhere to shoot on mobile)
+  const handleTouchStart = useCallback((event: TouchEvent) => {
+    if (!isMobile) return;
+
+    // Check if touch is on a control element
+    const target = event.target as HTMLElement;
+    if (target.closest('.mobile-controls')) return;
+
+    event.preventDefault();
+    const touch = event.touches[0];
+    if (touch) {
+      mousePosition.current = { x: touch.clientX, y: touch.clientY };
+    }
+  }, [isMobile]);
+
+  const handleTouchMove = useCallback((event: TouchEvent) => {
+    if (!isMobile) return;
+
+    const target = event.target as HTMLElement;
+    if (target.closest('.mobile-controls')) return;
+
+    event.preventDefault();
+    const touch = event.touches[0];
+    if (touch) {
+      mousePosition.current = { x: touch.clientX, y: touch.clientY };
+    }
+  }, [isMobile]);
+
   useEffect(() => {
+    // Detect mobile device
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        || (window.innerWidth <= 768 && 'ontouchstart' in window);
+      setIsMobile(isMobileDevice);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
 
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
@@ -393,12 +456,16 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
     }, 1000);
 
     return () => {
+      window.removeEventListener('resize', checkMobile);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
       clearInterval(timer);
+      if (autoShootInterval.current) clearInterval(autoShootInterval.current);
     };
-  }, [handleMouseMove, handleMouseDown, handleKeyDown, onWin, score]);
+  }, [handleMouseMove, handleMouseDown, handleKeyDown, handleTouchStart, handleTouchMove, onWin, score]);
 
   const gameLoop = useCallback(() => {
     const { ships, projectiles, explosions, loot, bases } = gameObjects.current;
@@ -414,14 +481,33 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
     const canvas = canvasRef.current;
     if (canvas) {
       const viewport = { x: player.x - canvas.width / 2, y: player.y - canvas.height / 2 };
-      const targetX = mousePosition.current.x + viewport.x;
-      const targetY = mousePosition.current.y + viewport.y;
-      const dx = targetX - player.x;
-      const dy = targetY - player.y;
-      player.angle = Math.atan2(dy, dx);
-      const acceleration = 0.1;
-      player.vx += Math.cos(player.angle) * acceleration;
-      player.vy += Math.sin(player.angle) * acceleration;
+
+      // Use joystick input for mobile, mouse for desktop
+      if (isMobile && joystickInput.current.angle !== null) {
+        // Mobile: joystick controls movement direction
+        const acceleration = 0.1 * joystickInput.current.distance;
+        player.angle = joystickInput.current.angle;
+        player.vx += Math.cos(player.angle) * acceleration;
+        player.vy += Math.sin(player.angle) * acceleration;
+
+        // Keep aiming at touch position on screen
+        const targetX = mousePosition.current.x + viewport.x;
+        const targetY = mousePosition.current.y + viewport.y;
+        const dx = targetX - player.x;
+        const dy = targetY - player.y;
+        player.angle = Math.atan2(dy, dx);
+      } else if (!isMobile) {
+        // Desktop: mouse controls both movement and aiming
+        const targetX = mousePosition.current.x + viewport.x;
+        const targetY = mousePosition.current.y + viewport.y;
+        const dx = targetX - player.x;
+        const dy = targetY - player.y;
+        player.angle = Math.atan2(dy, dx);
+        const acceleration = 0.1;
+        player.vx += Math.cos(player.angle) * acceleration;
+        player.vy += Math.sin(player.angle) * acceleration;
+      }
+
       const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
       if (speed > player.maxSpeed) {
         player.vx = (player.vx / speed) * player.maxSpeed;
@@ -684,7 +770,7 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
 
     draw();
     animationFrameId.current = requestAnimationFrame(gameLoop);
-  }, [onGameOver, score, setScore, playerCargo, onWin]);
+  }, [onGameOver, score, setScore, playerCargo, onWin, isMobile]);
 
   const draw = () => {
     const canvas = canvasRef.current;
@@ -970,34 +1056,47 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   const seconds = timeRemaining % 60;
 
   return (
-    <div>
+    <div className="relative w-full h-full">
       <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" />
-      <div className="absolute top-5 left-5 text-2xl font-bold tracking-widest text-shadow">
+      <div className={`absolute ${isMobile ? 'top-2 left-2 text-lg' : 'top-5 left-5 text-2xl'} font-bold tracking-widest text-shadow`}>
         <div>SCORE: {score}</div>
         <div>CARGO: {playerCargo}</div>
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-lg">SHIELD:</span>
-          <div className="flex gap-1">
-            {Array.from({ length: maxPlayerShieldEnergy }, (_, i) => (
-              <div
-                key={i}
-                className={`w-3 h-6 border ${
-                  i < playerShieldEnergy
-                    ? 'bg-blue-400 border-blue-300'
-                    : 'bg-gray-700 border-gray-600'
-                }`}
-              />
-            ))}
+        {!isMobile && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-lg">SHIELD:</span>
+            <div className="flex gap-1">
+              {Array.from({ length: maxPlayerShieldEnergy }, (_, i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-6 border ${
+                    i < playerShieldEnergy
+                      ? 'bg-blue-400 border-blue-300'
+                      : 'bg-gray-700 border-gray-600'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
+        )}
+      </div>
+       <div className={`absolute ${isMobile ? 'top-2 right-2 text-sm' : 'top-5 right-5 text-2xl'} font-bold tracking-widest text-shadow text-right`}>
+            <div>GOAL: SIZE {WIN_SIZE}</div>
+            <div>TIME: {minutes}:{seconds.toString().padStart(2, '0')}</div>
+      </div>
+      {!isMobile && (
+        <div className="absolute bottom-5 right-5 text-lg font-mono text-gray-500">
+          V1.1
         </div>
-      </div>
-       <div className="absolute top-5 right-5 text-2xl font-bold tracking-widest text-shadow text-right">
-            <div>GOAL: REACH SIZE {WIN_SIZE}</div>
-            <div>OR SURVIVE: {minutes}:{seconds.toString().padStart(2, '0')}</div>
-      </div>
-      <div className="absolute bottom-5 right-5 text-lg font-mono text-gray-500">
-        V1.1
-      </div>
+      )}
+      {isMobile && (
+        <MobileControls
+          onJoystickMove={handleJoystickMove}
+          onShoot={handleMobileShoot}
+          onShield={handleMobileShield}
+          shieldEnergy={playerShieldEnergy}
+          maxShieldEnergy={maxPlayerShieldEnergy}
+        />
+      )}
     </div>
   );
 };
