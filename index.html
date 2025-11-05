@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Racer - Arcade Flying Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>🛩️ Sky Racer</h1>
+            <div class="score-display">
+                <span>Score: <span id="score">0</span></span>
+                <span>High Score: <span id="highScore">0</span></span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="startScreen" class="screen">
+            <h2>Sky Racer</h2>
+            <p>Fly through the skies and avoid obstacles!</p>
+            <div class="controls">
+                <p><strong>Controls:</strong></p>
+                <p>⬆️ Arrow Up - Move Up</p>
+                <p>⬇️ Arrow Down - Move Down</p>
+                <p>SPACE - Start/Restart</p>
+            </div>
+            <button id="startBtn" class="game-btn">START GAME</button>
+        </div>
+
+        <div id="gameOverScreen" class="screen hidden">
+            <h2>Game Over!</h2>
+            <p>Your Score: <span id="finalScore">0</span></p>
+            <p>High Score: <span id="finalHighScore">0</span></p>
+            <button id="restartBtn" class="game-btn">PLAY AGAIN</button>
+        </div>
+
+        <div id="pauseScreen" class="screen hidden">
+            <h2>Paused</h2>
+            <p>Press SPACE to continue</p>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
