@@ -40,6 +40,7 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
 
   // Mobile controls state
   const [isMobile, setIsMobile] = useState(false);
+  const [forceMobile, setForceMobile] = useState(false);
   const joystickInput = useRef<{ angle: number | null; distance: number }>({ angle: null, distance: 0 });
   const lastShootTime = useRef<number>(0);
   const autoShootInterval = useRef<NodeJS.Timeout | null>(null);
@@ -381,6 +382,10 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
       event.preventDefault();
       activateShield(PLAYER_ID);
     }
+    // Toggle mobile mode with 'M' key for testing
+    if (event.code === 'KeyM') {
+      setForceMobile(prev => !prev);
+    }
   }, []);
 
   // Mobile control handlers
@@ -429,10 +434,36 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   }, [isMobile]);
 
   useEffect(() => {
+    // Check URL parameter for forcing mobile mode
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mobile') === 'true') {
+      setForceMobile(true);
+    }
+  }, []);
+
+  useEffect(() => {
     // Detect mobile device
     const checkMobile = () => {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-        || (window.innerWidth <= 768 && 'ontouchstart' in window);
+      if (forceMobile) {
+        setIsMobile(true);
+        return;
+      }
+
+      const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth <= 768;
+      const isMobileDevice = isMobileUserAgent || (hasTouch && isSmallScreen);
+
+      console.log('Mobile detection:', {
+        isMobileUserAgent,
+        hasTouch,
+        isSmallScreen,
+        isMobileDevice,
+        forceMobile,
+        userAgent: navigator.userAgent,
+        screenWidth: window.innerWidth
+      });
+
       setIsMobile(isMobileDevice);
     };
     checkMobile();
@@ -465,7 +496,7 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
       clearInterval(timer);
       if (autoShootInterval.current) clearInterval(autoShootInterval.current);
     };
-  }, [handleMouseMove, handleMouseDown, handleKeyDown, handleTouchStart, handleTouchMove, onWin, score]);
+  }, [handleMouseMove, handleMouseDown, handleKeyDown, handleTouchStart, handleTouchMove, onWin, score, forceMobile]);
 
   const gameLoop = useCallback(() => {
     const { ships, projectiles, explosions, loot, bases } = gameObjects.current;
@@ -1058,7 +1089,10 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   return (
     <div className="relative w-full h-full">
       <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" />
-      <div className={`absolute ${isMobile ? 'top-2 left-2 text-lg' : 'top-5 left-5 text-2xl'} font-bold tracking-widest text-shadow`}>
+
+      {/* Top Left HUD */}
+      <div className={`absolute ${isMobile ? 'top-1 left-1 text-xs' : 'top-5 left-5 text-2xl'} font-bold tracking-wide text-white z-10`}
+           style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
         <div>SCORE: {score}</div>
         <div>CARGO: {playerCargo}</div>
         {!isMobile && (
@@ -1079,15 +1113,26 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
           </div>
         )}
       </div>
-       <div className={`absolute ${isMobile ? 'top-2 right-2 text-sm' : 'top-5 right-5 text-2xl'} font-bold tracking-widest text-shadow text-right`}>
-            <div>GOAL: SIZE {WIN_SIZE}</div>
-            <div>TIME: {minutes}:{seconds.toString().padStart(2, '0')}</div>
+
+      {/* Top Right HUD */}
+      <div className={`absolute ${isMobile ? 'top-1 right-1 text-xs' : 'top-5 right-5 text-2xl'} font-bold tracking-wide text-white text-right z-10`}
+           style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+        <div>SIZE: {WIN_SIZE}</div>
+        <div>{minutes}:{seconds.toString().padStart(2, '0')}</div>
       </div>
+
+      {/* Debug indicator */}
+      <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-xs text-yellow-400 font-bold z-10"
+           style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+        {isMobile ? (forceMobile ? 'MOBILE MODE (FORCED)' : 'MOBILE MODE') : 'DESKTOP MODE (Press M to toggle)'}
+      </div>
+
       {!isMobile && (
         <div className="absolute bottom-5 right-5 text-lg font-mono text-gray-500">
           V1.1
         </div>
       )}
+
       {isMobile && (
         <MobileControls
           onJoystickMove={handleJoystickMove}
