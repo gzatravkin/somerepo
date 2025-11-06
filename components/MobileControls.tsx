@@ -21,8 +21,8 @@ const MobileControls: React.FC<MobileControlsProps> = ({
   const joystickTouchId = useRef<number | null>(null);
   const shootTouchId = useRef<number | null>(null);
 
-  const JOYSTICK_RADIUS = 60;
-  const JOYSTICK_MAX_DISTANCE = 50;
+  const JOYSTICK_RADIUS = 50;
+  const JOYSTICK_MAX_DISTANCE = 40;
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
@@ -121,11 +121,11 @@ const MobileControls: React.FC<MobileControlsProps> = ({
   };
 
   return (
-    <div className="mobile-controls pointer-events-auto">
+    <div className="mobile-controls pointer-events-none">
       {/* Virtual Joystick */}
       <div
         ref={joystickBaseRef}
-        className="fixed bottom-8 left-8 z-50"
+        className="fixed bottom-4 left-4 z-50 pointer-events-auto"
         style={{
           width: `${JOYSTICK_RADIUS * 2}px`,
           height: `${JOYSTICK_RADIUS * 2}px`,
@@ -133,46 +133,45 @@ const MobileControls: React.FC<MobileControlsProps> = ({
       >
         {/* Joystick Base */}
         <div
-          className="absolute inset-0 rounded-full border-4 border-white/30 bg-white/10"
+          className="absolute inset-0 rounded-full border-3 border-white/40 bg-black/20"
           style={{
-            backdropFilter: 'blur(10px)',
+            backdropFilter: 'blur(5px)',
           }}
         />
 
         {/* Joystick Stick */}
         <div
-          className="absolute rounded-full bg-white/70 border-2 border-white transition-all"
+          className="absolute rounded-full bg-white/80 border-2 border-white shadow-lg"
           style={{
-            width: '50px',
-            height: '50px',
-            left: `${JOYSTICK_RADIUS - 25 + joystickPosition.x}px`,
-            top: `${JOYSTICK_RADIUS - 25 + joystickPosition.y}px`,
-            backdropFilter: 'blur(5px)',
-            boxShadow: joystickActive ? '0 0 20px rgba(255, 255, 255, 0.5)' : 'none',
+            width: '40px',
+            height: '40px',
+            left: `${JOYSTICK_RADIUS - 20 + joystickPosition.x}px`,
+            top: `${JOYSTICK_RADIUS - 20 + joystickPosition.y}px`,
+            boxShadow: joystickActive ? '0 0 15px rgba(255, 255, 255, 0.8)' : '0 2px 4px rgba(0,0,0,0.3)',
           }}
         />
 
         {/* Joystick Label */}
-        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-white/70 text-xs font-bold whitespace-nowrap">
+        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-white text-xs font-bold whitespace-nowrap"
+             style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           MOVE
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="fixed bottom-8 right-8 z-50 flex flex-col gap-4">
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-3 pointer-events-auto">
         {/* Shoot Button */}
         <button
           onTouchStart={handleShootTouchStart}
           onTouchEnd={handleShootTouchEnd}
-          className="w-20 h-20 rounded-full bg-red-600/70 border-4 border-red-400/80 active:bg-red-700 active:scale-95 transition-all flex items-center justify-center text-white font-bold text-sm shadow-lg"
+          className="w-16 h-16 rounded-full bg-red-600/80 border-3 border-red-300 active:bg-red-700 active:scale-90 transition-all flex items-center justify-center text-white font-bold shadow-lg"
           style={{
-            backdropFilter: 'blur(10px)',
             touchAction: 'none',
           }}
         >
-          <div className="flex flex-col items-center">
-            <div className="text-2xl">🔫</div>
-            <div className="text-xs">FIRE</div>
+          <div className="flex flex-col items-center leading-tight">
+            <div className="text-xl">🔫</div>
+            <div className="text-[10px]">FIRE</div>
           </div>
         </button>
 
@@ -180,20 +179,19 @@ const MobileControls: React.FC<MobileControlsProps> = ({
         <button
           onTouchStart={handleShieldTouch}
           disabled={shieldEnergy < 1}
-          className={`w-20 h-20 rounded-full border-4 active:scale-95 transition-all flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+          className={`w-16 h-16 rounded-full border-3 active:scale-90 transition-all flex items-center justify-center text-white font-bold shadow-lg ${
             shieldEnergy >= 1
-              ? 'bg-blue-600/70 border-blue-400/80 active:bg-blue-700'
-              : 'bg-gray-600/50 border-gray-500/50 opacity-50'
+              ? 'bg-blue-600/80 border-blue-300 active:bg-blue-700'
+              : 'bg-gray-600/50 border-gray-400 opacity-40'
           }`}
           style={{
-            backdropFilter: 'blur(10px)',
             touchAction: 'none',
           }}
         >
-          <div className="flex flex-col items-center">
-            <div className="text-2xl">🛡️</div>
-            <div className="text-xs">SHIELD</div>
-            <div className="text-xs mt-1">{Math.floor(shieldEnergy)}</div>
+          <div className="flex flex-col items-center leading-tight">
+            <div className="text-xl">🛡️</div>
+            <div className="text-[10px]">SHIELD</div>
+            <div className="text-[10px] font-bold">{Math.floor(shieldEnergy)}</div>
           </div>
         </button>
       </div>

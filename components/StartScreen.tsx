@@ -13,13 +13,14 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
       <h1 className={`${isMobile ? 'text-4xl sm:text-5xl' : 'text-7xl'} font-bold text-cyan-400 drop-shadow-[0_0_15px_rgba(0,255,255,0.7)] tracking-widest mb-4 text-center`}>
         COSMIC CONFLICT
       </h1>
-      <div className={`text-center ${isMobile ? 'text-sm' : 'text-lg'} text-gray-300 max-w-lg mb-8 space-y-2 px-4`}>
-        <p className={`font-bold ${isMobile ? 'text-base' : 'text-xl'} text-cyan-300 mb-2`}>
+      <div className={`text-center ${isMobile ? 'text-xs' : 'text-lg'} text-gray-300 max-w-lg mb-6 space-y-1 px-4`}>
+        <p className={`font-bold ${isMobile ? 'text-sm' : 'text-xl'} text-cyan-300 mb-1`}>
           GOAL: Survive for 3 minutes or grow to size 150!
         </p>
-        <p>{isMobile ? 'Use joystick to move, buttons to fire and shield.' : 'Your ship follows the mouse cursor. Left-click to fire.'}</p>
-        <p>Destroy other ships, collect their loot, and upgrade at bases.</p>
-        <p>Avoid larger ships and beware of powerful <span className="text-fuchsia-400 font-bold">Elite</span> enemies!</p>
+        <p>{isMobile ? 'Use joystick to move, fire button to shoot, shield button for defense.' : 'Your ship follows the mouse cursor. Left-click to fire.'}</p>
+        <p className={isMobile ? 'text-xs' : ''}>Destroy ships, collect loot, and upgrade at colored bases.</p>
+        <p className={isMobile ? 'text-xs' : ''}>Weapons upgrade automatically as you grow larger!</p>
+        <p className={isMobile ? 'text-xs' : ''}>Avoid larger ships and <span className="text-fuchsia-400 font-bold">Elite</span> enemies!</p>
       </div>
       <button
         onClick={onStart}
