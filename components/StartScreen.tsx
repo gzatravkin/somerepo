@@ -17,9 +17,9 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
         <p className={`font-bold ${isMobile ? 'text-sm' : 'text-xl'} text-cyan-300 mb-1`}>
           GOAL: Survive for 3 minutes or grow to size 150!
         </p>
-        <p>{isMobile ? 'Use joystick to move, fire button to shoot, shield button for defense.' : 'Your ship follows the mouse cursor. Left-click to fire.'}</p>
+        <p>{isMobile ? 'Joystick: move | Fire/Shield buttons on right | Weapon switch at bottom center' : 'Mouse: aim/move | Left-click: fire | Space: shield | 1/2 or Tab: switch weapon'}</p>
         <p className={isMobile ? 'text-xs' : ''}>Destroy ships, collect loot, and upgrade at colored bases.</p>
-        <p className={isMobile ? 'text-xs' : ''}>Weapons upgrade automatically as you grow larger!</p>
+        <p className={isMobile ? 'text-xs' : ''}>Switch between BULLET (fast) and CANNON (explosive) weapons!</p>
         <p className={isMobile ? 'text-xs' : ''}>Avoid larger ships and <span className="text-fuchsia-400 font-bold">Elite</span> enemies!</p>
       </div>
       <button

@@ -41,6 +41,7 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   // Mobile controls state
   const [isMobile, setIsMobile] = useState(false);
   const [forceMobile, setForceMobile] = useState(false);
+  const [currentWeapon, setCurrentWeapon] = useState<'BULLET' | 'CANNON'>('BULLET');
   const joystickInput = useRef<{ angle: number | null; distance: number }>({ angle: null, distance: 0 });
   const lastShootTime = useRef<number>(0);
   const autoShootInterval = useRef<NodeJS.Timeout | null>(null);
@@ -96,7 +97,10 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   };
 
   const createProjectile = (owner: Ship): Projectile => {
-    const weaponType: WeaponType = owner.size >= CANNON_THRESHOLD ? 'CANNON' : 'BULLET';
+    // Use current weapon for player, size-based for AI
+    const weaponType: WeaponType = owner.isPlayer ? currentWeapon : (owner.size >= CANNON_THRESHOLD ? 'CANNON' : 'BULLET');
+
+    console.log('Creating projectile:', { isPlayer: owner.isPlayer, weaponType, currentWeapon, ownerSize: owner.size });
 
     if (weaponType === 'CANNON') {
       const speed = 5;
@@ -153,8 +157,11 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
     const ship = gameObjects.current.ships.get(shipId);
     if (!ship) return;
     const now = Date.now();
-    const weaponType = ship.size >= CANNON_THRESHOLD ? 'CANNON' : 'BULLET';
+    // Use current weapon for player, size-based for AI
+    const weaponType = ship.isPlayer ? currentWeapon : (ship.size >= CANNON_THRESHOLD ? 'CANNON' : 'BULLET');
     const cooldown = weaponType === 'CANNON' ? ship.shootCooldown * 2.5 : ship.shootCooldown;
+
+    console.log('Shoot called:', { shipId, isPlayer: ship.isPlayer, weaponType, currentWeapon });
 
     if (now - ship.lastShotTime > cooldown) {
       gameObjects.current.projectiles.push(createProjectile(ship));
@@ -378,13 +385,37 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   }, []);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    console.log('Key pressed:', event.code);
     if (event.code === 'Space') {
       event.preventDefault();
       activateShield(PLAYER_ID);
     }
+    // Weapon switching with 1 and 2 keys
+    if (event.code === 'Digit1') {
+      console.log('Switching to BULLET');
+      setCurrentWeapon('BULLET');
+    }
+    if (event.code === 'Digit2') {
+      console.log('Switching to CANNON');
+      setCurrentWeapon('CANNON');
+    }
+    // Toggle weapon with Tab
+    if (event.code === 'Tab') {
+      event.preventDefault();
+      setCurrentWeapon(prev => {
+        const newWeapon = prev === 'BULLET' ? 'CANNON' : 'BULLET';
+        console.log('Weapon switched from', prev, 'to', newWeapon);
+        return newWeapon;
+      });
+    }
     // Toggle mobile mode with 'M' key for testing
     if (event.code === 'KeyM') {
-      setForceMobile(prev => !prev);
+      console.log('M key pressed! Toggling mobile mode');
+      setForceMobile(prev => {
+        const newValue = !prev;
+        console.log('Force mobile changed from', prev, 'to', newValue);
+        return newValue;
+      });
     }
   }, []);
 
@@ -403,6 +434,14 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
 
   const handleMobileShield = useCallback(() => {
     activateShield(PLAYER_ID);
+  }, []);
+
+  const handleWeaponSwitch = useCallback(() => {
+    setCurrentWeapon(prev => {
+      const newWeapon = prev === 'BULLET' ? 'CANNON' : 'BULLET';
+      console.log('Weapon switched from', prev, 'to', newWeapon);
+      return newWeapon;
+    });
   }, []);
 
   // Touch event handlers for canvas (tap anywhere to shoot on mobile)
@@ -434,17 +473,33 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   }, [isMobile]);
 
   useEffect(() => {
+    console.log('=== Initial URL check ===');
     // Check URL parameter for forcing mobile mode
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('mobile') === 'true') {
+    const mobileParam = urlParams.get('mobile');
+    console.log('URL mobile parameter:', mobileParam);
+    if (mobileParam === 'true') {
+      console.log('Setting forceMobile to true from URL parameter');
       setForceMobile(true);
     }
   }, []);
 
   useEffect(() => {
+    console.log('=== forceMobile changed ===', forceMobile);
+  }, [forceMobile]);
+
+  useEffect(() => {
+    console.log('=== isMobile changed ===', isMobile);
+  }, [isMobile]);
+
+  useEffect(() => {
     // Detect mobile device
     const checkMobile = () => {
+      console.log('=== checkMobile called ===');
+      console.log('forceMobile state:', forceMobile);
+
       if (forceMobile) {
+        console.log('Force mobile is TRUE, setting isMobile to true');
         setIsMobile(true);
         return;
       }
@@ -457,11 +512,13 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
       console.log('Mobile detection:', {
         isMobileUserAgent,
         hasTouch,
+        maxTouchPoints: navigator.maxTouchPoints,
         isSmallScreen,
         isMobileDevice,
         forceMobile,
         userAgent: navigator.userAgent,
-        screenWidth: window.innerWidth
+        screenWidth: window.innerWidth,
+        screenHeight: window.innerHeight
       });
 
       setIsMobile(isMobileDevice);
@@ -1095,22 +1152,32 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
            style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
         <div>SCORE: {score}</div>
         <div>CARGO: {playerCargo}</div>
-        {!isMobile && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-lg">SHIELD:</span>
-            <div className="flex gap-1">
-              {Array.from({ length: maxPlayerShieldEnergy }, (_, i) => (
-                <div
-                  key={i}
-                  className={`w-3 h-6 border ${
-                    i < playerShieldEnergy
-                      ? 'bg-blue-400 border-blue-300'
-                      : 'bg-gray-700 border-gray-600'
-                  }`}
-                />
-              ))}
-            </div>
+        {isMobile && (
+          <div className="text-xs mt-1">
+            WEAPON: {currentWeapon}
           </div>
+        )}
+        {!isMobile && (
+          <>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-lg">WEAPON: {currentWeapon}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-lg">SHIELD:</span>
+              <div className="flex gap-1">
+                {Array.from({ length: maxPlayerShieldEnergy }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`w-3 h-6 border ${
+                      i < playerShieldEnergy
+                        ? 'bg-blue-400 border-blue-300'
+                        : 'bg-gray-700 border-gray-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -1138,8 +1205,10 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
           onJoystickMove={handleJoystickMove}
           onShoot={handleMobileShoot}
           onShield={handleMobileShield}
+          onWeaponSwitch={handleWeaponSwitch}
           shieldEnergy={playerShieldEnergy}
           maxShieldEnergy={maxPlayerShieldEnergy}
+          currentWeapon={currentWeapon}
         />
       )}
     </div>
