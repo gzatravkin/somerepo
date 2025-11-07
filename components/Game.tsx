@@ -42,9 +42,19 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [forceMobile, setForceMobile] = useState(false);
   const [currentWeapon, setCurrentWeapon] = useState<'BULLET' | 'CANNON'>('BULLET');
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(true);
   const joystickInput = useRef<{ angle: number | null; distance: number }>({ angle: null, distance: 0 });
   const lastShootTime = useRef<number>(0);
   const autoShootInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const addDebugLog = (message: string) => {
+    console.log(message);
+    setDebugInfo(prev => {
+      const newLogs = [...prev, `${new Date().toLocaleTimeString()}: ${message}`];
+      return newLogs.slice(-10); // Keep last 10 logs
+    });
+  };
 
 
   const createShip = (isPlayer: boolean = false, assignedBase: Base | null = null): Ship => {
@@ -385,18 +395,18 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   }, []);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    console.log('Key pressed:', event.code);
+    addDebugLog(`Key pressed: ${event.code}`);
     if (event.code === 'Space') {
       event.preventDefault();
       activateShield(PLAYER_ID);
     }
     // Weapon switching with 1 and 2 keys
     if (event.code === 'Digit1') {
-      console.log('Switching to BULLET');
+      addDebugLog('Switching to BULLET');
       setCurrentWeapon('BULLET');
     }
     if (event.code === 'Digit2') {
-      console.log('Switching to CANNON');
+      addDebugLog('Switching to CANNON');
       setCurrentWeapon('CANNON');
     }
     // Toggle weapon with Tab
@@ -404,18 +414,22 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
       event.preventDefault();
       setCurrentWeapon(prev => {
         const newWeapon = prev === 'BULLET' ? 'CANNON' : 'BULLET';
-        console.log('Weapon switched from', prev, 'to', newWeapon);
+        addDebugLog(`Weapon switched from ${prev} to ${newWeapon}`);
         return newWeapon;
       });
     }
     // Toggle mobile mode with 'M' key for testing
     if (event.code === 'KeyM') {
-      console.log('M key pressed! Toggling mobile mode');
+      addDebugLog('M key pressed! Toggling mobile mode');
       setForceMobile(prev => {
         const newValue = !prev;
-        console.log('Force mobile changed from', prev, 'to', newValue);
+        addDebugLog(`Force mobile changed from ${prev} to ${newValue}`);
         return newValue;
       });
+    }
+    // Toggle debug panel with 'D' key
+    if (event.code === 'KeyD') {
+      setShowDebug(prev => !prev);
     }
   }, []);
 
@@ -439,7 +453,7 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   const handleWeaponSwitch = useCallback(() => {
     setCurrentWeapon(prev => {
       const newWeapon = prev === 'BULLET' ? 'CANNON' : 'BULLET';
-      console.log('Weapon switched from', prev, 'to', newWeapon);
+      addDebugLog(`Weapon switched from ${prev} to ${newWeapon}`);
       return newWeapon;
     });
   }, []);
@@ -473,33 +487,32 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   }, [isMobile]);
 
   useEffect(() => {
-    console.log('=== Initial URL check ===');
+    addDebugLog('=== Initial URL check ===');
     // Check URL parameter for forcing mobile mode
     const urlParams = new URLSearchParams(window.location.search);
     const mobileParam = urlParams.get('mobile');
-    console.log('URL mobile parameter:', mobileParam);
+    addDebugLog(`URL mobile parameter: ${mobileParam}`);
     if (mobileParam === 'true') {
-      console.log('Setting forceMobile to true from URL parameter');
+      addDebugLog('Setting forceMobile to true from URL parameter');
       setForceMobile(true);
     }
   }, []);
 
   useEffect(() => {
-    console.log('=== forceMobile changed ===', forceMobile);
+    addDebugLog(`=== forceMobile changed === ${forceMobile}`);
   }, [forceMobile]);
 
   useEffect(() => {
-    console.log('=== isMobile changed ===', isMobile);
+    addDebugLog(`=== isMobile changed === ${isMobile}`);
   }, [isMobile]);
 
   useEffect(() => {
     // Detect mobile device
     const checkMobile = () => {
-      console.log('=== checkMobile called ===');
-      console.log('forceMobile state:', forceMobile);
+      addDebugLog('=== checkMobile called ===');
 
       if (forceMobile) {
-        console.log('Force mobile is TRUE, setting isMobile to true');
+        addDebugLog('Force mobile is TRUE, setting isMobile to true');
         setIsMobile(true);
         return;
       }
@@ -509,17 +522,7 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
       const isSmallScreen = window.innerWidth <= 768;
       const isMobileDevice = isMobileUserAgent || (hasTouch && isSmallScreen);
 
-      console.log('Mobile detection:', {
-        isMobileUserAgent,
-        hasTouch,
-        maxTouchPoints: navigator.maxTouchPoints,
-        isSmallScreen,
-        isMobileDevice,
-        forceMobile,
-        userAgent: navigator.userAgent,
-        screenWidth: window.innerWidth,
-        screenHeight: window.innerHeight
-      });
+      addDebugLog(`UserAgent: ${isMobileUserAgent}, Touch: ${hasTouch}, SmallScreen: ${isSmallScreen}, IsMobile: ${isMobileDevice}`);
 
       setIsMobile(isMobileDevice);
     };
@@ -1146,6 +1149,28 @@ const Game: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
   return (
     <div className="relative w-full h-full">
       <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" />
+
+      {/* Debug Panel */}
+      {showDebug && (
+        <div className="absolute top-20 left-2 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-md z-50 border-2 border-yellow-400">
+          <div className="flex justify-between items-center mb-2 border-b border-yellow-400 pb-1">
+            <span className="font-bold text-yellow-400">DEBUG INFO (Press D to toggle)</span>
+          </div>
+          <div className="space-y-1">
+            <div>Mode: <span className="text-cyan-400 font-bold">{isMobile ? 'MOBILE' : 'DESKTOP'}</span></div>
+            <div>Force Mobile: <span className="text-cyan-400">{forceMobile ? 'YES' : 'NO'}</span></div>
+            <div>Screen: <span className="text-cyan-400">{window.innerWidth}x{window.innerHeight}</span></div>
+            <div>Touch Support: <span className="text-cyan-400">{('ontouchstart' in window) ? 'YES' : 'NO'}</span></div>
+            <div>Current Weapon: <span className="text-cyan-400">{currentWeapon}</span></div>
+            <div className="border-t border-gray-600 pt-1 mt-2">
+              <div className="font-bold text-yellow-400 mb-1">Recent Logs:</div>
+              {debugInfo.map((log, i) => (
+                <div key={i} className="text-green-400 text-[10px]">{log}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Left HUD */}
       <div className={`absolute ${isMobile ? 'top-1 left-1 text-xs' : 'top-5 left-5 text-2xl'} font-bold tracking-wide text-white z-10`}
