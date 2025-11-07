@@ -13,6 +13,7 @@ import SVGProjectile from './svg/SVGProjectile';
 import SVGExplosion from './svg/SVGExplosion';
 import SVGLoot from './svg/SVGLoot';
 import SVGBase from './svg/SVGBase';
+import MobileControls from './MobileControls';
 
 interface GameProps {
   onGameOver: (score: number) => void;
@@ -63,6 +64,22 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
   const screenShake = useRef<{ x: number; y: number; intensity: number }>({ x: 0, y: 0, intensity: 0 });
   const screenFlash = useRef<{ color: string; intensity: number }>({ color: '#FFFFFF', intensity: 0 });
   const [cameraPos, setCameraPos] = useState({ x: 0, y: 0 });
+
+  // Mobile controls state
+  const [isMobile, setIsMobile] = useState(false);
+  const [forceMobile, setForceMobile] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(true);
+  const joystickInput = useRef<{ angle: number | null; distance: number }>({ angle: null, distance: 0 });
+  const lastShootTime = useRef<number>(0);
+
+  const addDebugLog = (message: string) => {
+    console.log(message);
+    setDebugInfo(prev => {
+      const newLogs = [...prev, `${new Date().toLocaleTimeString()}: ${message}`];
+      return newLogs.slice(-10); // Keep last 10 logs
+    });
+  };
 
   const createParticles = (
     x: number,
@@ -193,12 +210,145 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
     if (event.code === 'KeyC') {
       setScanlinesEnabled(prev => !prev);
     }
+
+    // Toggle mobile mode with 'M' key for testing
+    if (event.code === 'KeyM') {
+      addDebugLog('M key pressed! Toggling mobile mode');
+      setForceMobile(prev => {
+        const newValue = !prev;
+        addDebugLog(`Force mobile changed from ${prev} to ${newValue}`);
+        return newValue;
+      });
+    }
+
+    // Toggle debug panel with 'D' key
+    if (event.code === 'KeyD') {
+      setShowDebug(prev => !prev);
+    }
+  }, []);
+
+  // Mobile control handlers
+  const handleJoystickMove = useCallback((angle: number | null, distance: number) => {
+    joystickInput.current = { angle, distance };
+  }, []);
+
+  const handleMobileShoot = useCallback(() => {
+    const now = Date.now();
+    if (now - lastShootTime.current > 100) {
+      const player = gameObjects.current.ships.get(PLAYER_ID);
+      if (player) {
+        const specialProjectiles = createSpecialAbilityProjectiles(player, gameObjects.current.ships);
+        if (specialProjectiles.length > 0) {
+          gameObjects.current.projectiles.push(...specialProjectiles);
+          const weaponConfig = WEAPON_CONFIGS[player.weapon];
+          createParticles(
+            player.x + Math.cos(player.angle) * player.size,
+            player.y + Math.sin(player.angle) * player.size,
+            10,
+            weaponConfig.glowColor,
+            'glow',
+            3
+          );
+        }
+      }
+      lastShootTime.current = now;
+    }
+  }, []);
+
+  const handleMobileShield = useCallback(() => {
+    const player = gameObjects.current.ships.get(PLAYER_ID);
+    if (player) {
+      activateShield(player);
+    }
+  }, []);
+
+  const handleWeaponSwitch = useCallback(() => {
+    const player = gameObjects.current.ships.get(PLAYER_ID);
+    if (player) {
+      const weaponOrder: WeaponType[] = ['PULSE_LASER', 'PLASMA_CANNON', 'RAILGUN', 'MISSILE_LAUNCHER', 'BEAM_WEAPON', 'QUANTUM_DISRUPTOR', 'MATTER_ANNIHILATOR'];
+      const currentIndex = weaponOrder.indexOf(player.weapon);
+      const nextIndex = (currentIndex + 1) % weaponOrder.length;
+      player.weapon = weaponOrder[nextIndex];
+      setCurrentWeapon(weaponOrder[nextIndex]);
+      addDebugLog(`Weapon switched to ${weaponOrder[nextIndex]}`);
+    }
+  }, []);
+
+  // Touch event handlers for canvas (tap anywhere to shoot on mobile)
+  const handleTouchStart = useCallback((event: TouchEvent) => {
+    if (!isMobile) return;
+
+    const target = event.target as HTMLElement;
+    if (target.closest('.mobile-controls')) return;
+
+    event.preventDefault();
+    const touch = event.touches[0];
+    if (touch) {
+      mousePosition.current = { x: touch.clientX, y: touch.clientY };
+    }
+  }, [isMobile]);
+
+  const handleTouchMove = useCallback((event: TouchEvent) => {
+    if (!isMobile) return;
+
+    const target = event.target as HTMLElement;
+    if (target.closest('.mobile-controls')) return;
+
+    event.preventDefault();
+    const touch = event.touches[0];
+    if (touch) {
+      mousePosition.current = { x: touch.clientX, y: touch.clientY };
+    }
+  }, [isMobile]);
+
+  // Check URL parameter for forcing mobile mode
+  useEffect(() => {
+    addDebugLog('=== Initial URL check ===');
+    const urlParams = new URLSearchParams(window.location.search);
+    const mobileParam = urlParams.get('mobile');
+    addDebugLog(`URL mobile parameter: ${mobileParam}`);
+    if (mobileParam === 'true') {
+      addDebugLog('Setting forceMobile to true from URL parameter');
+      setForceMobile(true);
+    }
   }, []);
 
   useEffect(() => {
+    addDebugLog(`=== forceMobile changed === ${forceMobile}`);
+  }, [forceMobile]);
+
+  useEffect(() => {
+    addDebugLog(`=== isMobile changed === ${isMobile}`);
+  }, [isMobile]);
+
+  useEffect(() => {
+    // Detect mobile device
+    const checkMobile = () => {
+      addDebugLog('=== checkMobile called ===');
+
+      if (forceMobile) {
+        addDebugLog('Force mobile is TRUE, setting isMobile to true');
+        setIsMobile(true);
+        return;
+      }
+
+      const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth <= 768;
+      const isMobileDevice = isMobileUserAgent || (hasTouch && isSmallScreen);
+
+      addDebugLog(`UserAgent: ${isMobileUserAgent}, Touch: ${hasTouch}, SmallScreen: ${isSmallScreen}, IsMobile: ${isMobileDevice}`);
+
+      setIsMobile(isMobileDevice);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -212,12 +362,15 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
     }, 1000);
 
     return () => {
+      window.removeEventListener('resize', checkMobile);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
       clearInterval(timer);
     };
-  }, [handleMouseMove, handleMouseDown, handleKeyDown, onWin, score]);
+  }, [handleMouseMove, handleMouseDown, handleKeyDown, handleTouchStart, handleTouchMove, onWin, score, forceMobile]);
 
   const gameLoop = useCallback(() => {
     const { ships, projectiles, explosions, loot, bases, particles } = gameObjects.current;
@@ -259,14 +412,33 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
     const canvas = canvasRef.current;
     if (canvas) {
       const viewport = { x: player.x - canvas.width / 2, y: player.y - canvas.height / 2 };
-      const targetX = mousePosition.current.x + viewport.x;
-      const targetY = mousePosition.current.y + viewport.y;
-      const dx = targetX - player.x;
-      const dy = targetY - player.y;
-      player.angle = Math.atan2(dy, dx);
-      const acceleration = 0.1;
-      player.vx += Math.cos(player.angle) * acceleration;
-      player.vy += Math.sin(player.angle) * acceleration;
+
+      // Use joystick input for mobile, mouse for desktop
+      if (isMobile && joystickInput.current.angle !== null) {
+        // Mobile: joystick controls movement direction
+        const acceleration = 0.1 * joystickInput.current.distance;
+        const moveAngle = joystickInput.current.angle;
+        player.vx += Math.cos(moveAngle) * acceleration;
+        player.vy += Math.sin(moveAngle) * acceleration;
+
+        // Keep aiming at touch position on screen
+        const targetX = mousePosition.current.x + viewport.x;
+        const targetY = mousePosition.current.y + viewport.y;
+        const dx = targetX - player.x;
+        const dy = targetY - player.y;
+        player.angle = Math.atan2(dy, dx);
+      } else if (!isMobile) {
+        // Desktop: mouse controls both movement and aiming
+        const targetX = mousePosition.current.x + viewport.x;
+        const targetY = mousePosition.current.y + viewport.y;
+        const dx = targetX - player.x;
+        const dy = targetY - player.y;
+        player.angle = Math.atan2(dy, dx);
+        const acceleration = 0.1;
+        player.vx += Math.cos(player.angle) * acceleration;
+        player.vy += Math.sin(player.angle) * acceleration;
+      }
+
       const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
       if (speed > player.maxSpeed) {
         player.vx = (player.vx / speed) * player.maxSpeed;
@@ -614,7 +786,7 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
 
     draw();
     animationFrameId.current = requestAnimationFrame(gameLoop);
-  }, [onGameOver, score, setScore, playerCargo, onWin, playerShieldEnergy]);
+  }, [onGameOver, score, setScore, playerCargo, onWin, playerShieldEnergy, isMobile]);
 
   const draw = () => {
     const canvas = canvasRef.current;
@@ -911,23 +1083,30 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
         ))}
       </svg>
 
-      <div className="absolute top-5 left-5 text-2xl font-bold tracking-widest text-white pointer-events-none" style={{ textShadow: '2px 2px 4px #000' }}>
+      <div className={`absolute pointer-events-none ${isMobile ? 'top-1 left-1 text-xs' : 'top-5 left-5 text-2xl'} font-bold tracking-widest text-white`} style={{ textShadow: '2px 2px 4px #000' }}>
         <div>SCORE: {score}</div>
         <div>CARGO: {playerCargo}</div>
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-lg">SHIELD:</span>
-          <div className="flex gap-1">
-            {Array.from({ length: maxPlayerShieldEnergy }, (_, i) => (
-              <div
-                key={i}
-                className={`w-3 h-6 border ${
-                  i < playerShieldEnergy ? 'bg-blue-400 border-blue-300' : 'bg-gray-700 border-gray-600'
-                }`}
-              />
-            ))}
+        {isMobile && (
+          <div className="text-xs mt-1">
+            WEAPON: {weaponConfig?.name || 'Unknown'}
           </div>
-        </div>
-        <div className="mt-4 p-3 bg-black bg-opacity-50 rounded">
+        )}
+        {!isMobile && (
+          <>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-lg">SHIELD:</span>
+              <div className="flex gap-1">
+                {Array.from({ length: maxPlayerShieldEnergy }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`w-3 h-6 border ${
+                      i < playerShieldEnergy ? 'bg-blue-400 border-blue-300' : 'bg-gray-700 border-gray-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-black bg-opacity-50 rounded">
           <div className="text-lg" style={{ color: weaponConfig?.color || '#FFF' }}>
             {weaponConfig?.name || 'Unknown Weapon'}
           </div>
@@ -968,30 +1147,76 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
                   {index + 1}: {config.name}
                 </div>
               ))}
+              </div>
             </div>
           </div>
-        </div>
+        </>
+        )}
       </div>
 
-      <div className="absolute top-5 right-5 text-2xl font-bold tracking-widest text-white text-right pointer-events-none" style={{ textShadow: '2px 2px 4px #000' }}>
-        <div>GOAL: REACH SIZE {WIN_SIZE}</div>
+      <div className={`absolute text-right pointer-events-none ${isMobile ? 'top-1 right-1 text-xs' : 'top-5 right-5 text-2xl'} font-bold tracking-widest text-white`} style={{ textShadow: '2px 2px 4px #000' }}>
+        <div>{isMobile ? `SIZE ${WIN_SIZE}` : `GOAL: REACH SIZE ${WIN_SIZE}`}</div>
         <div>
-          OR SURVIVE: {minutes}:{seconds.toString().padStart(2, '0')}
+          {isMobile ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `OR SURVIVE: ${minutes}:${seconds.toString().padStart(2, '0')}`}
         </div>
       </div>
 
       <div className="absolute bottom-5 right-5 text-lg font-mono text-gray-500 pointer-events-none">V2.0</div>
 
-      <div className="absolute bottom-5 left-5 text-sm text-white pointer-events-none">
-        <div className="bg-black bg-opacity-50 p-2 rounded">
-          <div className="font-bold mb-1">CONTROLS:</div>
-          <div>MOUSE: Aim & Move</div>
-          <div>LEFT CLICK: Special Ability</div>
-          <div>SPACE: Activate Shield</div>
-          <div>1-7: Switch Weapons</div>
-          <div>C: Toggle Scanlines {scanlinesEnabled ? '(ON)' : '(OFF)'}</div>
+      {!isMobile && (
+        <div className="absolute bottom-5 left-5 text-sm text-white pointer-events-none">
+          <div className="bg-black bg-opacity-50 p-2 rounded">
+            <div className="font-bold mb-1">CONTROLS:</div>
+            <div>MOUSE: Aim & Move</div>
+            <div>LEFT CLICK: Special Ability</div>
+            <div>SPACE: Activate Shield</div>
+            <div>1-7: Switch Weapons</div>
+            <div>C: Toggle Scanlines {scanlinesEnabled ? '(ON)' : '(OFF)'}</div>
+            <div>M: Toggle Mobile Mode (for testing)</div>
+            <div>D: Toggle Debug Panel</div>
+          </div>
         </div>
+      )}
+
+      {/* Debug Panel */}
+      {showDebug && (
+        <div className="absolute top-20 left-2 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-md z-50 border-2 border-yellow-400 pointer-events-none">
+          <div className="flex justify-between items-center mb-2 border-b border-yellow-400 pb-1">
+            <span className="font-bold text-yellow-400">DEBUG INFO (Press D to toggle)</span>
+          </div>
+          <div className="space-y-1">
+            <div>Mode: <span className="text-cyan-400 font-bold">{isMobile ? 'MOBILE' : 'DESKTOP'}</span></div>
+            <div>Force Mobile: <span className="text-cyan-400">{forceMobile ? 'YES' : 'NO'}</span></div>
+            <div>Screen: <span className="text-cyan-400">{window.innerWidth}x{window.innerHeight}</span></div>
+            <div>Touch Support: <span className="text-cyan-400">{('ontouchstart' in window) ? 'YES' : 'NO'}</span></div>
+            <div>Current Weapon: <span className="text-cyan-400">{currentWeapon}</span></div>
+            <div className="border-t border-gray-600 pt-1 mt-2">
+              <div className="font-bold text-yellow-400 mb-1">Recent Logs:</div>
+              {debugInfo.map((log, i) => (
+                <div key={i} className="text-green-400 text-[10px]">{log}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Debug indicator */}
+      <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-xs text-yellow-400 font-bold z-10 pointer-events-none"
+           style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+        {isMobile ? (forceMobile ? 'MOBILE MODE (FORCED)' : 'MOBILE MODE') : 'DESKTOP MODE (Press M to toggle)'}
       </div>
+
+      {isMobile && (
+        <MobileControls
+          onJoystickMove={handleJoystickMove}
+          onShoot={handleMobileShoot}
+          onShield={handleMobileShield}
+          onWeaponSwitch={handleWeaponSwitch}
+          shieldEnergy={playerShieldEnergy}
+          maxShieldEnergy={maxPlayerShieldEnergy}
+          currentWeapon={currentWeapon === 'PULSE_LASER' ? 'BULLET' : 'CANNON'}
+        />
+      )}
     </div>
   );
 };
