@@ -69,9 +69,10 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
   const [isMobile, setIsMobile] = useState(false);
   const [forceMobile, setForceMobile] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
   const joystickInput = useRef<{ angle: number | null; distance: number }>({ angle: null, distance: 0 });
   const lastShootTime = useRef<number>(0);
+  const mobileAimPosition = useRef<Vector | null>(null);
 
   const addDebugLog = (message: string) => {
     console.log(message);
@@ -274,7 +275,7 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
     }
   }, []);
 
-  // Touch event handlers for canvas (tap anywhere to shoot on mobile)
+  // Touch event handlers for canvas (tap anywhere to set aim direction on mobile)
   const handleTouchStart = useCallback((event: TouchEvent) => {
     if (!isMobile) return;
 
@@ -284,7 +285,8 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
     event.preventDefault();
     const touch = event.touches[0];
     if (touch) {
-      mousePosition.current = { x: touch.clientX, y: touch.clientY };
+      // Store mobile aim position for aiming
+      mobileAimPosition.current = { x: touch.clientX, y: touch.clientY };
     }
   }, [isMobile]);
 
@@ -297,7 +299,8 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
     event.preventDefault();
     const touch = event.touches[0];
     if (touch) {
-      mousePosition.current = { x: touch.clientX, y: touch.clientY };
+      // Update mobile aim position while dragging
+      mobileAimPosition.current = { x: touch.clientX, y: touch.clientY };
     }
   }, [isMobile]);
 
@@ -414,20 +417,34 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
       const viewport = { x: player.x - canvas.width / 2, y: player.y - canvas.height / 2 };
 
       // Use joystick input for mobile, mouse for desktop
-      if (isMobile && joystickInput.current.angle !== null) {
-        // Mobile: joystick controls movement direction
-        const acceleration = 0.1 * joystickInput.current.distance;
-        const moveAngle = joystickInput.current.angle;
-        player.vx += Math.cos(moveAngle) * acceleration;
-        player.vy += Math.sin(moveAngle) * acceleration;
+      if (isMobile) {
+        // Mobile: joystick controls movement, ship aims in joystick direction OR touch aim position
+        if (joystickInput.current.angle !== null && joystickInput.current.distance > 0) {
+          const acceleration = 0.1 * joystickInput.current.distance;
+          const moveAngle = joystickInput.current.angle;
+          player.vx += Math.cos(moveAngle) * acceleration;
+          player.vy += Math.sin(moveAngle) * acceleration;
 
-        // Keep aiming at touch position on screen
-        const targetX = mousePosition.current.x + viewport.x;
-        const targetY = mousePosition.current.y + viewport.y;
-        const dx = targetX - player.x;
-        const dy = targetY - player.y;
-        player.angle = Math.atan2(dy, dx);
-      } else if (!isMobile) {
+          // If user has set an aim position by touching screen, use that; otherwise aim in movement direction
+          if (mobileAimPosition.current) {
+            const targetX = mobileAimPosition.current.x + viewport.x;
+            const targetY = mobileAimPosition.current.y + viewport.y;
+            const dx = targetX - player.x;
+            const dy = targetY - player.y;
+            player.angle = Math.atan2(dy, dx);
+          } else {
+            // Aim in the direction of movement
+            player.angle = moveAngle;
+          }
+        } else if (mobileAimPosition.current) {
+          // Not moving but has aim position
+          const targetX = mobileAimPosition.current.x + viewport.x;
+          const targetY = mobileAimPosition.current.y + viewport.y;
+          const dx = targetX - player.x;
+          const dy = targetY - player.y;
+          player.angle = Math.atan2(dy, dx);
+        }
+      } else {
         // Desktop: mouse controls both movement and aiming
         const targetX = mousePosition.current.x + viewport.x;
         const targetY = mousePosition.current.y + viewport.y;
