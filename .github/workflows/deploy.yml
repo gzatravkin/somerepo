@@ -36,7 +36,9 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: DEV_BUILD=true npm run build
+        env:
+          NODE_ENV: development
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
