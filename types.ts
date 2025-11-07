@@ -30,8 +30,8 @@ export type AIState = 'HUNTING' | 'FLEEING' | 'WANDERING' | 'COLLECTING_LOOT' | 
 export type AIPersonality = 'AGGRESSOR' | 'SCAVENGER' | 'DEFENDER' | 'WANDERER';
 export type UpgradeType = 'FIRE_RATE' | 'SHIP_SPEED' | 'WEAPON_DAMAGE';
 
-// Weapon System
-export type WeaponType = 'PULSE_LASER' | 'PLASMA_CANNON' | 'RAILGUN' | 'MISSILE_LAUNCHER' | 'BEAM_WEAPON' | 'QUANTUM_DISRUPTOR' | 'MATTER_ANNIHILATOR';
+// Weapon System (simplified for current game)
+export type WeaponType = 'BULLET' | 'CANNON' | 'PULSE_LASER' | 'PLASMA_CANNON' | 'RAILGUN' | 'MISSILE_LAUNCHER' | 'BEAM_WEAPON' | 'QUANTUM_DISRUPTOR' | 'MATTER_ANNIHILATOR';
 
 export interface WeaponConfig {
   type: WeaponType;

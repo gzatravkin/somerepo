@@ -4,17 +4,22 @@ interface MobileControlsProps {
   onJoystickMove: (angle: number | null, distance: number) => void;
   onShoot: () => void;
   onShield: () => void;
+  onWeaponSwitch: () => void;
   shieldEnergy: number;
   maxShieldEnergy: number;
+  currentWeapon: 'BULLET' | 'CANNON';
 }
 
 const MobileControls: React.FC<MobileControlsProps> = ({
   onJoystickMove,
   onShoot,
   onShield,
+  onWeaponSwitch,
   shieldEnergy,
   maxShieldEnergy,
+  currentWeapon,
 }) => {
+  console.log('MobileControls rendered with weapon:', currentWeapon);
   const [joystickActive, setJoystickActive] = useState(false);
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
   const joystickBaseRef = useRef<HTMLDivElement>(null);
@@ -120,6 +125,12 @@ const MobileControls: React.FC<MobileControlsProps> = ({
     onShield();
   };
 
+  const handleWeaponSwitchTouch = (e: React.TouchEvent) => {
+    e.preventDefault();
+    console.log('Weapon switch button touched');
+    onWeaponSwitch();
+  };
+
   return (
     <div className="mobile-controls pointer-events-none">
       {/* Virtual Joystick */}
@@ -158,7 +169,7 @@ const MobileControls: React.FC<MobileControlsProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Right Side */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-3 pointer-events-auto">
         {/* Shoot Button */}
         <button
@@ -192,6 +203,26 @@ const MobileControls: React.FC<MobileControlsProps> = ({
             <div className="text-xl">🛡️</div>
             <div className="text-[10px]">SHIELD</div>
             <div className="text-[10px] font-bold">{Math.floor(shieldEnergy)}</div>
+          </div>
+        </button>
+      </div>
+
+      {/* Weapon Switch Button - Bottom Center */}
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto">
+        <button
+          onTouchStart={handleWeaponSwitchTouch}
+          className={`w-20 h-16 rounded-lg border-3 active:scale-90 transition-all flex items-center justify-center text-white font-bold shadow-lg ${
+            currentWeapon === 'BULLET'
+              ? 'bg-cyan-600/80 border-cyan-300'
+              : 'bg-orange-600/80 border-orange-300'
+          }`}
+          style={{
+            touchAction: 'none',
+          }}
+        >
+          <div className="flex flex-col items-center leading-tight">
+            <div className="text-xl">{currentWeapon === 'BULLET' ? '⚡' : '💥'}</div>
+            <div className="text-[10px]">{currentWeapon === 'BULLET' ? 'BULLET' : 'CANNON'}</div>
           </div>
         </button>
       </div>
