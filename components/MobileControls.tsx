@@ -26,6 +26,14 @@ const MobileControls: React.FC<MobileControlsProps> = ({
   const joystickTouchId = useRef<number | null>(null);
   const shootTouchId = useRef<number | null>(null);
 
+  // Store callback in ref to avoid recreating event listeners on every render
+  const onJoystickMoveRef = useRef(onJoystickMove);
+
+  // Update ref when callback changes
+  useEffect(() => {
+    onJoystickMoveRef.current = onJoystickMove;
+  }, [onJoystickMove]);
+
   const JOYSTICK_RADIUS = 50;
   const JOYSTICK_MAX_DISTANCE = 40;
 
@@ -62,7 +70,7 @@ const MobileControls: React.FC<MobileControlsProps> = ({
           joystickTouchId.current = null;
           setJoystickActive(false);
           setJoystickPosition({ x: 0, y: 0 });
-          onJoystickMove(null, 0);
+          onJoystickMoveRef.current(null, 0);
         }
 
         // Release shoot button
@@ -89,7 +97,7 @@ const MobileControls: React.FC<MobileControlsProps> = ({
       const y = Math.sin(angle) * clampedDistance;
 
       setJoystickPosition({ x, y });
-      onJoystickMove(angle, clampedDistance / JOYSTICK_MAX_DISTANCE);
+      onJoystickMoveRef.current(angle, clampedDistance / JOYSTICK_MAX_DISTANCE);
     };
 
     document.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -103,7 +111,7 @@ const MobileControls: React.FC<MobileControlsProps> = ({
       document.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [onJoystickMove]);
+  }, []); // Empty deps - event listeners only set up once, callback accessed via ref
 
   const handleShootTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
