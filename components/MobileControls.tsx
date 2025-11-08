@@ -19,9 +19,14 @@ const MobileControls: React.FC<MobileControlsProps> = ({
   maxShieldEnergy,
   currentWeapon,
 }) => {
-  console.log('MobileControls rendered with weapon:', currentWeapon);
+  console.log('[MOBILE CONTROLS] ✓ Component rendered with weapon:', currentWeapon);
   const [joystickActive, setJoystickActive] = useState(false);
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
+
+  // Log joystick position changes
+  useEffect(() => {
+    console.log('[MOBILE CONTROLS] Joystick visual position:', joystickPosition, 'active:', joystickActive);
+  }, [joystickPosition, joystickActive]);
   const joystickBaseRef = useRef<HTMLDivElement>(null);
   const joystickTouchId = useRef<number | null>(null);
   const shootTouchId = useRef<number | null>(null);
@@ -34,20 +39,34 @@ const MobileControls: React.FC<MobileControlsProps> = ({
     onJoystickMoveRef.current = onJoystickMove;
   }, [onJoystickMove]);
 
+  // Log when joystick base ref is set
+  useEffect(() => {
+    if (joystickBaseRef.current) {
+      console.log('[MOBILE CONTROLS] ✓ Joystick base element mounted:', joystickBaseRef.current);
+      const rect = joystickBaseRef.current.getBoundingClientRect();
+      console.log('[MOBILE CONTROLS] Joystick base position:', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+    }
+  }, []);
+
   const JOYSTICK_RADIUS = 50;
   const JOYSTICK_MAX_DISTANCE = 40;
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
+      console.log('[JOYSTICK] touchstart event, touches:', e.changedTouches.length);
       Array.from(e.changedTouches).forEach((touch) => {
         const target = touch.target as HTMLElement;
+        console.log('[JOYSTICK] touch target:', target.className);
 
         // Handle joystick touch
         if (joystickBaseRef.current?.contains(target) && joystickTouchId.current === null) {
+          console.log('[JOYSTICK] ✓ Joystick touch detected! ID:', touch.identifier);
           e.preventDefault();
           joystickTouchId.current = touch.identifier;
           setJoystickActive(true);
           updateJoystickPosition(touch);
+        } else {
+          console.log('[JOYSTICK] ✗ Touch not on joystick. Contains:', joystickBaseRef.current?.contains(target), 'Current ID:', joystickTouchId.current);
         }
       });
     };
@@ -56,6 +75,7 @@ const MobileControls: React.FC<MobileControlsProps> = ({
       Array.from(e.changedTouches).forEach((touch) => {
         // Update joystick position
         if (touch.identifier === joystickTouchId.current) {
+          console.log('[JOYSTICK] touchmove for joystick, ID:', touch.identifier);
           e.preventDefault();
           updateJoystickPosition(touch);
         }
@@ -66,11 +86,13 @@ const MobileControls: React.FC<MobileControlsProps> = ({
       Array.from(e.changedTouches).forEach((touch) => {
         // Release joystick
         if (touch.identifier === joystickTouchId.current) {
+          console.log('[JOYSTICK] touchend - releasing joystick, ID:', touch.identifier);
           e.preventDefault();
           joystickTouchId.current = null;
           setJoystickActive(false);
           setJoystickPosition({ x: 0, y: 0 });
           onJoystickMoveRef.current(null, 0);
+          console.log('[JOYSTICK] Joystick released, callback called with (null, 0)');
         }
 
         // Release shoot button
@@ -81,7 +103,10 @@ const MobileControls: React.FC<MobileControlsProps> = ({
     };
 
     const updateJoystickPosition = (touch: Touch) => {
-      if (!joystickBaseRef.current) return;
+      if (!joystickBaseRef.current) {
+        console.log('[JOYSTICK] ✗ updateJoystickPosition called but joystickBaseRef is null!');
+        return;
+      }
 
       const rect = joystickBaseRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -95,6 +120,8 @@ const MobileControls: React.FC<MobileControlsProps> = ({
       const clampedDistance = Math.min(distance, JOYSTICK_MAX_DISTANCE);
       const x = Math.cos(angle) * clampedDistance;
       const y = Math.sin(angle) * clampedDistance;
+
+      console.log('[JOYSTICK] Position update - angle:', angle.toFixed(2), 'distance:', clampedDistance.toFixed(2), 'normalized:', (clampedDistance / JOYSTICK_MAX_DISTANCE).toFixed(2));
 
       setJoystickPosition({ x, y });
       onJoystickMoveRef.current(angle, clampedDistance / JOYSTICK_MAX_DISTANCE);

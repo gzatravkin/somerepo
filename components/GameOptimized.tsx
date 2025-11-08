@@ -230,6 +230,7 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
 
   // Mobile control handlers
   const handleJoystickMove = useCallback((angle: number | null, distance: number) => {
+    console.log('[GAME] Joystick callback - angle:', angle?.toFixed(2) || 'null', 'distance:', distance.toFixed(2));
     joystickInput.current = { angle, distance };
   }, []);
 
@@ -422,6 +423,7 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
         if (joystickInput.current.angle !== null && joystickInput.current.distance > 0) {
           const acceleration = 0.1 * joystickInput.current.distance;
           const moveAngle = joystickInput.current.angle;
+          console.log('[GAME LOOP] ✓ MOBILE MODE - Moving player - angle:', moveAngle.toFixed(2), 'accel:', acceleration.toFixed(3), 'vx:', player.vx.toFixed(2), 'vy:', player.vy.toFixed(2));
           player.vx += Math.cos(moveAngle) * acceleration;
           player.vy += Math.sin(moveAngle) * acceleration;
 
@@ -445,7 +447,10 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
           player.angle = Math.atan2(dy, dx);
         }
       } else {
-        // Desktop: mouse controls both movement and aiming
+        // Desktop: mouse controls both movement and aiming (log once every 60 frames to avoid spam)
+        if (Math.random() < 0.016) {
+          console.log('[GAME LOOP] ✗ DESKTOP MODE - using mouse controls');
+        }
         const targetX = mousePosition.current.x + viewport.x;
         const targetY = mousePosition.current.y + viewport.y;
         const dx = targetX - player.x;
@@ -804,6 +809,18 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
     draw();
     animationFrameId.current = requestAnimationFrame(gameLoop);
   }, [onGameOver, score, setScore, playerCargo, onWin, playerShieldEnergy, isMobile]);
+
+  // Restart game loop when isMobile changes to pick up new value
+  useEffect(() => {
+    console.log('[GAME] isMobile changed in restart effect:', isMobile, 'animationFrameId:', animationFrameId.current);
+    if (animationFrameId.current) {
+      console.log('[GAME] ✓ Restarting game loop due to isMobile change:', isMobile);
+      cancelAnimationFrame(animationFrameId.current);
+      animationFrameId.current = requestAnimationFrame(gameLoop);
+    } else {
+      console.log('[GAME] ✗ Cannot restart - game loop not started yet');
+    }
+  }, [isMobile, gameLoop]);
 
   const draw = () => {
     const canvas = canvasRef.current;
