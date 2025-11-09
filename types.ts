@@ -1,17 +1,166 @@
 export type GameState = 'START' | 'PLAYING' | 'GAME_OVER' | 'WIN';
+export type GameMode = 'RESTAURANT' | 'EXPEDITION';
 
 export interface Vector {
   x: number;
   y: number;
 }
 
-export interface TrailPoint {
+// Tile System
+export type TileType = 'FLOOR' | 'WALL' | 'DOOR_CLOSED' | 'DOOR_OPEN' | 'ENTRANCE' | 'EXIT';
+
+export interface Tile {
+  type: TileType;
   x: number;
   y: number;
-  alpha: number;
-  size: number;
+  variant?: number; // For visual variety
 }
 
+// Dungeon Structure
+export interface Room {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+}
+
+export interface Dungeon {
+  width: number;
+  height: number;
+  tiles: Tile[][];
+  rooms: Room[];
+}
+
+// Weapon System (Fantasy + Modern Guns)
+export type WeaponType =
+  // Fantasy weapons
+  | 'SWORD' | 'BOW' | 'CROSSBOW' | 'STAFF' | 'DAGGER'
+  // Modern weapons
+  | 'PISTOL' | 'SHOTGUN' | 'RIFLE' | 'SMG' | 'SNIPER'
+  // Special
+  | 'MAGIC_WAND' | 'FLAMETHROWER';
+
+export interface WeaponConfig {
+  type: WeaponType;
+  name: string;
+  damage: number;
+  fireRate: number; // ms between shots
+  projectileSpeed: number;
+  projectileSize: number;
+  range: number;
+  spreadAngle: number; // For shotgun-like weapons
+  projectileCount: number; // Number of projectiles per shot
+  knockback: number;
+  isMelee: boolean;
+  ammoType?: string;
+  color: string;
+}
+
+// Entity Base
+export interface Entity {
+  id: string;
+  x: number; // Grid position
+  y: number; // Grid position
+  pixelX: number; // Smooth pixel position for rendering
+  pixelY: number; // Smooth pixel position for rendering
+}
+
+// Player
+export interface Player extends Entity {
+  health: number;
+  maxHealth: number;
+  weapon: WeaponType;
+  inventory: FoodIngredient[];
+  angle: number; // Facing direction in radians
+  lastShotTime: number;
+  movementCooldown: number; // Time until next grid move
+}
+
+// Enemy Types
+export type EnemyType =
+  // Fantasy
+  | 'GOBLIN' | 'ORC' | 'SKELETON' | 'ZOMBIE' | 'DEMON'
+  // Modern/mixed
+  | 'SOLDIER' | 'ROBOT' | 'MUTANT' | 'CULTIST';
+
+export interface EnemyConfig {
+  type: EnemyType;
+  name: string;
+  health: number;
+  damage: number;
+  moveSpeed: number; // ms between moves
+  shootSpeed: number; // ms between shots
+  projectileSpeed: number;
+  projectileSize: number;
+  aggroRange: number; // Tiles
+  color: string;
+  lootTable: FoodIngredientType[];
+}
+
+export interface Enemy extends Entity {
+  type: EnemyType;
+  health: number;
+  maxHealth: number;
+  damage: number;
+  moveSpeed: number;
+  shootSpeed: number;
+  projectileSpeed: number;
+  projectileSize: number;
+  aggroRange: number;
+  lastMoveTime: number;
+  lastShotTime: number;
+  angle: number;
+  state: 'IDLE' | 'CHASING' | 'ATTACKING' | 'DEAD';
+  targetX?: number;
+  targetY?: number;
+}
+
+// Projectiles
+export interface Projectile {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  size: number;
+  color: string;
+  damage: number;
+  lifetime: number;
+  maxLifetime: number;
+  ownerId: string;
+  isPlayerProjectile: boolean;
+  weaponType: WeaponType;
+  knockback: number;
+}
+
+// Corpse and Loot System
+export type FoodIngredientType =
+  // Meats
+  | 'GOBLIN_MEAT' | 'ORC_MEAT' | 'DEMON_MEAT' | 'MUTANT_MEAT'
+  // Parts
+  | 'SKELETON_BONE' | 'ROBOT_PARTS' | 'ZOMBIE_BRAIN'
+  // Misc
+  | 'CULTIST_ROBE' | 'SOLDIER_RATIONS';
+
+export interface FoodIngredient {
+  type: FoodIngredientType;
+  name: string;
+  description: string;
+  healValue: number;
+  color: string;
+}
+
+export interface Corpse extends Entity {
+  enemyType: EnemyType;
+  loot: FoodIngredient[];
+  looted: boolean;
+  decayTime: number; // When it disappears
+}
+
+// Particles for effects
 export interface Particle {
   id: string;
   x: number;
@@ -23,160 +172,62 @@ export interface Particle {
   alpha: number;
   lifetime: number;
   maxLifetime: number;
-  type: 'spark' | 'smoke' | 'glow' | 'debris';
 }
 
-export type AIState = 'HUNTING' | 'FLEEING' | 'WANDERING' | 'COLLECTING_LOOT' | 'RETURNING_TO_BASE' | 'DEFENDING_BASE' | 'FLEEING_AND_SHOOTING';
-export type AIPersonality = 'AGGRESSOR' | 'SCAVENGER' | 'DEFENDER' | 'WANDERER';
-export type UpgradeType = 'FIRE_RATE' | 'SHIP_SPEED' | 'WEAPON_DAMAGE';
+// Game Stats
+export interface GameStats {
+  enemiesKilled: number;
+  itemsCollected: number;
+  floor: number;
+  score: number;
+}
 
-// Weapon System (simplified for current game)
-export type WeaponType = 'BULLET' | 'CANNON' | 'PULSE_LASER' | 'PLASMA_CANNON' | 'RAILGUN' | 'MISSILE_LAUNCHER' | 'BEAM_WEAPON' | 'QUANTUM_DISRUPTOR' | 'MATTER_ANNIHILATOR';
+// ===== RESTAURANT SYSTEM =====
 
-export interface WeaponConfig {
-  type: WeaponType;
+export type DishType =
+  | 'GOBLIN_STEW' | 'ORC_ROAST' | 'DEMON_CURRY' | 'MUTANT_BURGER'
+  | 'BONE_BROTH' | 'ROBOT_OIL_SOUP' | 'ZOMBIE_PIZZA'
+  | 'CULTIST_SALAD' | 'SOLDIER_SANDWICH'
+  | 'MYSTERY_MEAT_PIE' | 'FANTASY_FEAST' | 'WASTELAND_SPECIAL';
+
+export interface Recipe {
+  dish: DishType;
   name: string;
-  autoFireRate: number; // ms between auto shots
-  specialCooldown: number; // ms between special abilities
-  autoProjectileSpeed: number;
-  autoProjectileSize: number;
-  autoProjectileDamage: number;
-  autoProjectileLifetime: number;
-  specialDescription: string;
-  color: string;
-  glowColor: string;
+  description: string;
+  ingredients: FoodIngredientType[];
+  price: number; // Selling price
+  prepTime: number; // Seconds to cook
+  reputation: number; // Reputation gained when served
+  unlocked: boolean;
 }
 
-export type SpecialAbilityType =
-  | 'TRIPLE_SHOT'
-  | 'EXPLOSIVE_BLAST'
-  | 'PIERCING_SHOT'
-  | 'HOMING_MISSILES'
-  | 'CONTINUOUS_BEAM'
-  | 'QUANTUM_BURST'
-  | 'GRAVITY_WELL';
-
-export interface Ship {
+export interface Customer {
   id: string;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  angle: number;
-  size: number;
-  color: string;
-  isPlayer: boolean;
-  lastShotTime: number;
-  lastAutoFireTime: number;
-  lastSpecialTime: number;
-  shootCooldown: number;
-  projectileDamage: number;
-  maxSpeed: number;
-  health: number;
-  maxHealth: number;
-  cargo: number;
-  isElite: boolean;
-  weapon: WeaponType;
+  name: string;
+  type: 'ADVENTURER' | 'MERCHANT' | 'NOBLE' | 'SOLDIER' | 'WIZARD';
+  desiredDish: DishType | null;
+  patience: number; // Seconds before they leave
+  maxPatience: number;
+  tip: number; // Extra payment if served quickly
+  sprite: string; // Customer appearance
+}
+
+export interface RestaurantState {
+  money: number;
+  reputation: number;
+  level: number;
+  unlockedRecipes: DishType[];
+  customerQueue: Customer[];
+  preparedDishes: DishType[];
   upgrades: {
-    [key in UpgradeType]: number;
+    tableCount: number;
+    kitchenSpeed: number;
+    storageSizeIncrease: number;
   };
-  // Shield properties
-  shieldEnergy: number;
-  maxShieldEnergy: number;
-  shieldActive: boolean;
-  shieldActivatedTime: number;
-  shieldCooldown: number;
-  lastShieldUse: number;
-  // Visual effects
-  damageFlashTime: number;
-  engineTrail: TrailPoint[];
-  // AI-specific properties
-  aiState: AIState;
-  aiTarget: Ship | Loot | Base | null;
-  aiSecondaryTarget: Ship | null; // For shooting while fleeing
-  wanderTarget: Vector;
-  aiPersonality: AIPersonality;
-  aiParams: {
-    bravery: number; // 0-1, likelihood to attack bigger ships
-    aggression: number; // 0-1, how close to get/how often to shoot
-    reaction: number; // 0-1, how quickly they react/change behavior
-    precision: number; // 0-1, how accurate their movements/shots are
-  };
-  lastAIDecision: number; // Time of last major AI decision
-  aiFleeShootTimer: number; // Timer for coordinating flee and shoot
-  assignedBase: Base | null; // For defenders
 }
 
-export interface Projectile {
-  id: string;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  ownerId: string;
-  size: number;
-  color: string;
-  damage: number;
-  lifetime: number;
-  weaponType: WeaponType;
-  isSpecial: boolean;
-  specialType?: SpecialAbilityType;
-  // Visual effects
-  trail: TrailPoint[];
-  glowIntensity: number;
-  // For homing missiles
-  targetId?: string;
-  // For piercing shots
-  piercing?: boolean;
-  piercedShips?: Set<string>;
-  // For beams
-  isBeam?: boolean;
-  beamLength?: number;
-  // For gravity wells
-  pullRadius?: number;
-  pullStrength?: number;
-  stationary?: boolean;
-  stationaryTime?: number;
-  // For beams that track owner
-  trackOwner?: boolean;
-}
-
-export interface Star {
-  x: number;
-  y: number;
-  radius: number;
-  alpha: number;
-  layer: number;
-}
-
-export interface Explosion {
-  id: string;
-  x: number;
-  y: number;
-  ownerId: string;
-  radius: number;
-  maxRadius: number;
-  damage: number;
-  lifetime: number;
-  maxLifetime: number;
-  damageDealt: boolean;
-}
-
-export interface Loot {
-  id: string;
-  x: number;
-  y: number;
-  value: number;
-  radius: number;
-}
-
-export interface Base {
-  id: string;
-  x: number;
-  y: number;
-  radius: number;
-  color: string;
-  upgradeType: UpgradeType;
-  pulsePhase: number;
-  rotationAngle: number;
+export interface CookingSlot {
+  recipe: Recipe | null;
+  progress: number; // 0-100%
+  startTime: number;
 }
