@@ -1,4 +1,5 @@
 export type GameState = 'START' | 'PLAYING' | 'GAME_OVER' | 'WIN';
+export type GameMode = 'RESTAURANT' | 'EXPEDITION';
 
 export interface Vector {
   x: number;
@@ -179,4 +180,54 @@ export interface GameStats {
   itemsCollected: number;
   floor: number;
   score: number;
+}
+
+// ===== RESTAURANT SYSTEM =====
+
+export type DishType =
+  | 'GOBLIN_STEW' | 'ORC_ROAST' | 'DEMON_CURRY' | 'MUTANT_BURGER'
+  | 'BONE_BROTH' | 'ROBOT_OIL_SOUP' | 'ZOMBIE_PIZZA'
+  | 'CULTIST_SALAD' | 'SOLDIER_SANDWICH'
+  | 'MYSTERY_MEAT_PIE' | 'FANTASY_FEAST' | 'WASTELAND_SPECIAL';
+
+export interface Recipe {
+  dish: DishType;
+  name: string;
+  description: string;
+  ingredients: FoodIngredientType[];
+  price: number; // Selling price
+  prepTime: number; // Seconds to cook
+  reputation: number; // Reputation gained when served
+  unlocked: boolean;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  type: 'ADVENTURER' | 'MERCHANT' | 'NOBLE' | 'SOLDIER' | 'WIZARD';
+  desiredDish: DishType | null;
+  patience: number; // Seconds before they leave
+  maxPatience: number;
+  tip: number; // Extra payment if served quickly
+  sprite: string; // Customer appearance
+}
+
+export interface RestaurantState {
+  money: number;
+  reputation: number;
+  level: number;
+  unlockedRecipes: DishType[];
+  customerQueue: Customer[];
+  preparedDishes: DishType[];
+  upgrades: {
+    tableCount: number;
+    kitchenSpeed: number;
+    storageSizeIncrease: number;
+  };
+}
+
+export interface CookingSlot {
+  recipe: Recipe | null;
+  progress: number; // 0-100%
+  startTime: number;
 }

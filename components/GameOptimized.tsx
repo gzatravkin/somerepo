@@ -23,6 +23,7 @@ import { SVGCorpse } from './svg/SVGCorpse';
 interface GameProps {
   onGameOver: (score: number) => void;
   onWin: (score: number) => void;
+  onReturnToRestaurant?: (inventory: FoodIngredient[]) => void;
   score: number;
   setScore: React.Dispatch<React.SetStateAction<number>>;
 }
@@ -33,7 +34,7 @@ const TILE_SIZE = 32;
 const MOVE_SPEED = 200; // ms between player moves
 const PIXEL_MOVE_SPEED = 8; // pixels per frame for smooth movement
 
-const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore }) => {
+const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, onReturnToRestaurant, score, setScore }) => {
   const [gameStarted, setGameStarted] = useState(false);
 
   const gameState = useRef<{
@@ -185,11 +186,6 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
       if (e.key.toLowerCase() === 'e') {
         lootNearbyCorpse(gameState.current);
       }
-
-      // Use food with Q key
-      if (e.key.toLowerCase() === 'q') {
-        useFood(gameState.current);
-      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -285,7 +281,7 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
           <div>Inventory ({state.player.inventory.length}):</div>
           {state.player.inventory.slice(0, 5).map((item, i) => (
             <div key={i} style={{ fontSize: '12px', color: item.color }}>
-              {item.name} (+{item.healValue})
+              {item.name}
             </div>
           ))}
         </div>
@@ -293,9 +289,27 @@ const GameOptimized: React.FC<GameProps> = ({ onGameOver, onWin, score, setScore
           <div>WASD/Arrows: Move</div>
           <div>Mouse: Aim & Shoot</div>
           <div>E: Loot corpse</div>
-          <div>Q: Use food</div>
           <div>1-7: Switch weapon</div>
         </div>
+        {onReturnToRestaurant && (
+          <button
+            onClick={() => onReturnToRestaurant(state.player.inventory)}
+            style={{
+              marginTop: '15px',
+              padding: '10px 20px',
+              backgroundColor: '#FFD700',
+              color: '#000',
+              border: 'none',
+              borderRadius: '5px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+            }}
+          >
+            🏠 Return to Restaurant
+          </button>
+        )}
       </div>
     </div>
   );
@@ -661,15 +675,6 @@ function lootNearbyCorpse(state: any) {
   }
 }
 
-function useFood(state: any) {
-  const player = state.player;
-
-  if (player.inventory.length === 0) return;
-
-  const food = player.inventory.shift()!;
-  player.health = Math.min(player.maxHealth, player.health + food.healValue);
-  createParticles(state, player.pixelX, player.pixelY, '#00FF00', 10);
-}
 
 function createParticles(state: any, x: number, y: number, color: string, count: number) {
   for (let i = 0; i < count; i++) {
